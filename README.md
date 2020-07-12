@@ -1,0 +1,2 @@
+# BarbellMovementEfficiency
+Predicting barbell movement efficiency from accelerometer measurements
