@@ -38,6 +38,7 @@ dim(train.dat0)
 Next we'll try and narrow down the dataset to relevant variables using the following methods: variables with near zero variance, most NAs, and removing index columns.
 
 ```{r}
+set.seed(3000)
 inTrain <- createDataPartition(y=train.dat0$classe,p=.7, list = FALSE)
 train.dat <- train.dat0[inTrain,]
 test.dat <- train.dat0[-inTrain,]
@@ -64,7 +65,7 @@ test.dat1 <- test.dat1[,-c(1:7)]
 dim(train.dat1)
 dim(test.dat1)
 
-y <- train.dat1[,52]
+y <- train.dat1[,52] #creating x and y variables to help with random forest runtime
 x <- train.dat1[,-52]
 ```
 
@@ -91,7 +92,7 @@ Using the corrplot library we can narrow down to the top 12 correlated variables
 
 
 ### Tree Classification Model
-```{r}
+```{r Classification Model}
 set.seed(900)
 fit.tree <- train(classe ~., method = "rpart", data = train.dat1)
 fancyRpartPlot(fit.tree$finalModel)
@@ -100,10 +101,10 @@ pred.tree <- predict(fit.tree, test.dat1, type = "raw")
 conf.tree <- confusionMatrix(pred.tree, test.dat1$classe)
 conf.tree
 ```
-*The tree classification model has .49 accuracy rate and is not good at predicting class C, D and E.  It has an out-of-sample error of 0.51*
+**The tree classification model has .48 accuracy rate and is not good at predicting class C, D and E.  It has an out-of-sample error of 0.52**
 
 ### Random Forest Classification Model
-```{r}
+```{r Random Forest Model}
 set.seed(400)
 fitControl <- trainControl(method = "cv",number = 3,verboseIter=FALSE)
 fit.rf <- train(x,y, method = "rf", data = train.dat1, trControl = fitControl)
@@ -114,10 +115,10 @@ predict.rf <- predict(fit.rf, newdata = test.dat1)
 cm.rf <- confusionMatrix(predict.rf, test.dat1$classe)
 cm.rf
 ```
-*The accuracy rate for random forest is 0.996 with an out of sample error of .014.*
+**The accuracy rate for random forest is 0.994 with an out of sample error of .006.**
 
 ### Boosting Classification Model
-```{r}
+```{r Boost Model}
 set.seed(500)
 control.boost <- trainControl(method = "repeatedcv", number = 5, repeats = 1)
 fit.boost <- train(classe ~., method = "gbm", data = train.dat1, trControl = control.boost, verbose=FALSE) 
@@ -127,8 +128,9 @@ pred.boost <- predict(fit.tree, newdata = test.dat1)
 conf.boost <- confusionMatrix(pred.boost, test.dat1$classe)
 conf.boost
 ```
-The accuracy rate of the generalize boosting regression model turned out to be .49 yielding an out-of-sample error of 0.51.
+The accuracy rate of the generalize boosting regression model turned out to be .564 yielding an out-of-sample error of 0.436.
 
 
-*The Random Forest Model had a much higher accuracy rate and will be used for analysis of the validation set.*
+
+**The Random Forest Model had a much higher accuracy rate (.994) and will be used for analysis of the validation set.**
 
