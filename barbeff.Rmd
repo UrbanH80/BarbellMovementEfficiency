@@ -5,7 +5,7 @@ date: "7/12/2020"
 output: html_document
 ---
 
-#Executive Summary
+# Executive Summary
 Using devices such as Jawbone Up, Nike FuelBand, and Fitbit it is now possible to collect a large amount of data about personal activity relatively inexpensively. These type of devices are part of the quantified self movement – a group of enthusiasts who take measurements about themselves regularly to improve their health, to find patterns in their behavior, or because they are tech geeks. One thing that people regularly do is quantify how much of a particular activity they do, but they rarely quantify how well they do it. 
 
 In this project, we will use data from accelerometers on the belt, forearm, arm, and dumbell of 6 participants. The were asked to perform barbell lifts correctly and incorrectly in 5 different ways. We will pick the best model to predict how these barbell movements were executed (correctly or incorrectly).  More information an the dataset available from the website here: http://groupware.les.inf.puc-rio.br/har 
@@ -16,6 +16,8 @@ throwing the elbows to the front (Class B)
 lifting the dumbbell only halfway (Class C) 
 lowering the dumbbell only halfway (Class D) 
 throwing the hips to the front (Class E).
+
+**As shown in the analysis below, the Random Forest Model had a much higher accuracy rate (.994) and will be used for analysis of the validation set**
 
 # Data Analysis
 
@@ -115,6 +117,13 @@ predict.rf <- predict(fit.rf, newdata = test.dat1)
 cm.rf <- confusionMatrix(predict.rf, test.dat1$classe)
 cm.rf
 ```
+
+Here's a view of the plot for cross-validation:
+```{r}
+plot(fit.rf)
+```
+
+
 **The accuracy rate for random forest is 0.994 with an out of sample error of .006.**
 
 ### Boosting Classification Model
