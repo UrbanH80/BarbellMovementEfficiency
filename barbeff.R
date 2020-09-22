@@ -1,0 +1,111 @@
+# Using devices such as Jawbone Up, Nike FuelBand, and Fitbit it is now possible to collect a large amount of data about personal activity relatively inexpensively. These type of devices are part of the quantified self movement – a group of enthusiasts who take measurements about themselves regularly to improve their health, to find patterns in their behavior, or because they are tech geeks. One thing that people regularly do is quantify how much of a particular activity they do, but they rarely quantify how well they do it. 
+
+# In this project, we will use data from accelerometers on the belt, forearm, arm, and dumbell of 6 participants. The were asked to perform barbell lifts correctly and incorrectly in 5 different ways. We will pick the best model to predict how these barbell movements were executed (correctly or incorrectly).  More information an the dataset available from the website here: http://groupware.les.inf.puc-rio.br/har 
+
+# Levels: A, B, C, D, E
+# exactly according to the specification (Class A)
+# throwing the elbows to the front (Class B)
+# lifting the dumbbell only halfway (Class C) 
+# lowering the dumbbell only halfway (Class D) 
+# throwing the hips to the front (Class E).
+
+# Data Analysis
+        
+## Load data and packages
+library(caret)
+library(dplyr)
+library(corrplot)
+library(rpart)
+library(randomForest)
+library(rattle)
+train.dat0 = read.csv("https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv", na.strings = c("", "NA", "#DIV/0!", " ")) #make all blank strings NA
+valid.dat = read.csv("https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv", na.strings = c("", "NA", "#DIV/0!"," ")) 
+dim(train.dat0)
+
+## Exploratory Data Analysis
+# Next we'll try and narrow down the dataset to relevant variables using the following methods: variables with near zero variance, most NAs, and removing index columns.
+
+set.seed(3000)
+inTrain <- createDataPartition(y=train.dat0$classe,p=.7, list = FALSE)
+train.dat <- train.dat0[inTrain,]
+test.dat <- train.dat0[-inTrain,]
+dim(train.dat)
+dim(test.dat)
+# stripping out variables with low (near zero) variance and therefor low effect on classe
+nzv <- nearZeroVar(train.dat)   
+train.dat1 <- train.dat[,-nzv]
+nzv2 <- nearZeroVar(test.dat)   
+test.dat1 <- test.dat[,-nzv]
+#rmoving variables that are almost all (95%) NAs
+mostlyNA <- sapply(train.dat1, function(x) mean(is.na(x))) > 0.95
+train.dat1 <- train.dat1[ ,mostlyNA == FALSE]
+mostlyNA2 <- sapply(test.dat1, function(x) mean(is.na(x))) > 0.95
+test.dat1 <- test.dat1[ ,mostlyNA == FALSE]
+#remove first 7 rows
+train.dat1 <- train.dat1[,-c(1:7)]
+test.dat1 <- test.dat1[,-c(1:7)]
+dim(train.dat1)
+dim(test.dat1)
+y <- train.dat1[,52] #creating x and y variables to help with random forest runtime
+x <- train.dat1[,-52]
+
+
+# Through the steps above we have narrowed down to 52 variables from 160.  This makes sense after scanning the original dataset that had a lot of blank observations.
+
+# Since we still have a relatively large number of variables to look at, I'll use the corrplot library to plot a corellelagram to visualize which have the most influence.  https://www.r-bloggers.com/correlogram-in-r-how-to-highlight-the-most-correlated-variables-in-a-dataset/
+        
+# correlelagram
+cor.matrix <- cor(train.dat1[, -52])
+corrplot(cor.matrix, order = "FPC", method = "color", type = "upper", tl.cex = .6, tl.col = rgb(0, 0, 0)) #.6 appears to be the best font size
+correlated <- findCorrelation(cor.matrix, cutoff = .8)
+names(train.dat1[correlated])
+
+
+# Using the corrplot library we can narrow down to the top 12 correlated variables (using 0.8 cutoff)
+
+## Training the Model
+
+# *I'll run these 3 classification models learned in the course to compare how well they predict the correct barbell class variable.
+# 1. tree classification model
+# 2. random forest, and 
+# 3. boosting*
+
+
+### Tree Classification Model
+set.seed(900)
+fit.tree <- train(classe ~., method = "rpart", data = train.dat1)
+fancyRpartPlot(fit.tree$finalModel)
+pred.tree <- predict(fit.tree, test.dat1, type = "raw")
+conf.tree <- confusionMatrix(pred.tree, test.dat1$classe)
+conf.tree
+
+# **The tree classification model has .48 accuracy rate and is not good at predicting class C, D and E.  It has an out-of-sample error of 0.52**
+
+### Random Forest Classification Model
+set.seed(400)
+fitControl <- trainControl(method = "cv",number = 3,verboseIter=FALSE)
+fit.rf <- train(x,y, method = "rf", data = train.dat1, trControl = fitControl)
+fit.rf$finalModel
+predict.rf <- predict(fit.rf, newdata = test.dat1)
+cm.rf <- confusionMatrix(predict.rf, test.dat1$classe)
+cm.rf
+
+
+# plot for cross-validation:
+plot(fit.rf)
+
+
+# **The accuracy rate for random forest is 0.994 with an out of sample error of .006.**
+        
+### Boosting Classification Model
+set.seed(500)
+control.boost <- trainControl(method = "repeatedcv", number = 5, repeats = 1)
+fit.boost <- train(classe ~., method = "gbm", data = train.dat1, trControl = control.boost, verbose=FALSE) 
+fit.boost$finalModel
+pred.boost <- predict(fit.tree, newdata = test.dat1)
+conf.boost <- confusionMatrix(pred.boost, test.dat1$classe)
+conf.boost
+
+# The accuracy rate of the generalize boosting regression model turned out to be .564 yielding an out-of-sample error of 0.436.
+
+# **The Random Forest Model had a much higher accuracy rate (.994) and will be used for analysis of the validation set.**
